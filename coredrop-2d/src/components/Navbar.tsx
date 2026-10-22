@@ -34,7 +34,7 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="w-full border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,15,26,0.85)] backdrop-blur-md sticky top-0 z-50 px-4 py-3">
+    <header className="app-header w-full border-b border-[rgba(255,255,255,0.08)] bg-[rgba(10,15,26,0.85)] backdrop-blur-md sticky top-0 z-50 px-4 py-3">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
         {/* Brand / Logo */}
         <div className="flex items-center gap-3">
