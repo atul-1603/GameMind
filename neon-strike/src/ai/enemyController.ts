@@ -7,7 +7,6 @@ import { worldToGrid, gridToWorld, runPathfinding } from './navigation';
 import { resolvePlayerCollisions } from '../game/collision';
 import type { ArenaObstacle } from '../game/arenaDefinitions';
 import type { Projectile } from '../game/combatSystem';
-import { useGameStore } from '../game/gameStore';
 
 export interface EnemyInstance {
   id: string;
@@ -39,20 +38,20 @@ export function createEnemyInstance(
   patrolRoute: GridCoord[]
 ): EnemyInstance {
   let maxHealth = 70;
-  let speed = 6.0;
+  let speed = 2.8;
   let damage = 12;
   let fireCooldown = 0.8;
   let attackRange = 14;
 
   if (archetype === 'guardian') {
     maxHealth = 160;
-    speed = 3.2;
+    speed = 1.8;
     damage = 25;
     fireCooldown = 1.6;
     attackRange = 18;
   } else if (archetype === 'hunter') {
     maxHealth = 110;
-    speed = 4.8;
+    speed = 2.3;
     damage = 18;
     fireCooldown = 1.1;
     attackRange = 16;
@@ -103,7 +102,6 @@ export function updateEnemy(
 
   if (enemy.health <= 0 || enemy.state === 'DEAD') {
     enemy.state = 'DEAD';
-    useGameStore.getState().removeAIDiagnostic(enemy.id);
     return output;
   }
 
@@ -143,7 +141,6 @@ export function updateEnemy(
   enemy.state = transition.nextState;
 
   if (enemy.state === 'DEAD') {
-    useGameStore.getState().removeAIDiagnostic(enemy.id);
     return output;
   }
 
@@ -242,17 +239,6 @@ export function updateEnemy(
       enemy.lastPathCalcTime = now;
       enemy.lastPathCalcPlayerPos = { x: playerPos.x, z: playerPos.z };
 
-      // Update AI Diagnostics for live visualization overlay
-      useGameStore.getState().updateAIDiagnostic({
-        enemyId: enemy.id,
-        state: enemy.state,
-        algorithm: activeAlgorithm,
-        path: pathResult.path,
-        visitedNodes: pathResult.visitedNodes,
-        currentWaypointIndex: 0,
-        targetPos: targetWorldPos,
-        cost: pathResult.totalCost,
-      });
     }
   }
 

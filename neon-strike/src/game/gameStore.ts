@@ -54,6 +54,7 @@ interface GameStoreState {
 
   // Mission & statistics
   missionStats: MissionStats;
+  missionResetVersion: number;
 
   // Settings
   settings: GameSettings;
@@ -104,6 +105,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     damageReceived: 0,
     kills: 0,
   },
+  missionResetVersion: 0,
 
   settings: {
     mouseSensitivity: 1.0,
@@ -206,6 +208,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   resetMission: () =>
     set((state) => ({
+      missionResetVersion: state.missionResetVersion + 1,
       playerHealth: 100,
       playerAmmo: 30,
       isReloading: false,

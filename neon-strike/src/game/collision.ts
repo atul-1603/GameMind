@@ -17,6 +17,33 @@ export interface RayHit {
   obstacle?: ArenaObstacle;
 }
 
+export interface RayTargetHit {
+  hit: boolean;
+  distance: number;
+}
+
+/** Tests a ray against a rounded target volume used by enemy hit detection. */
+export function rayIntersectsTarget(
+  rayOrigin: { x: number; y: number; z: number },
+  rayDir: { x: number; y: number; z: number },
+  target: { x: number; y: number; z: number },
+  radius: number
+): RayTargetHit {
+  const offsetX = rayOrigin.x - target.x;
+  const offsetY = rayOrigin.y - target.y;
+  const offsetZ = rayOrigin.z - target.z;
+  const projection = offsetX * rayDir.x + offsetY * rayDir.y + offsetZ * rayDir.z;
+  const offsetLengthSquared = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
+  const discriminant = projection * projection - (offsetLengthSquared - radius * radius);
+
+  if (discriminant < 0) return { hit: false, distance: 0 };
+
+  const distance = -projection - Math.sqrt(discriminant);
+  if (distance <= 0) return { hit: false, distance: 0 };
+
+  return { hit: true, distance };
+}
+
 export function obstacleToAABB(obs: ArenaObstacle): AABB {
   const halfW = obs.width / 2;
   const halfD = obs.depth / 2;

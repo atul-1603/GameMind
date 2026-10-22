@@ -3,16 +3,12 @@ import { useGameStore } from '../game/gameStore';
 import { Shield, Zap, Target, Cpu, Clock } from 'lucide-react';
 
 interface GameHUDProps {
-  isPointerLocked: boolean;
-  onRequestPointerLock: () => void;
   isAiming: boolean;
   isShooting: boolean;
   hitMarkerVisible: boolean;
 }
 
 export const GameHUD: React.FC<GameHUDProps> = ({
-  isPointerLocked,
-  onRequestPointerLock,
   isAiming,
   hitMarkerVisible,
 }) => {
@@ -37,21 +33,6 @@ export const GameHUD: React.FC<GameHUDProps> = ({
 
   return (
     <div style={hudContainerStyle}>
-      {/* Click-to-lock mouse pointer prompt */}
-      {!isPointerLocked && (
-        <div style={pointerPromptOverlayStyle} onClick={onRequestPointerLock}>
-          <div className="cyber-panel" style={{ padding: '24px 36px', textAlign: 'center', cursor: 'pointer' }}>
-            <Target size={40} color="var(--neon-cyan)" style={{ marginBottom: '12px' }} />
-            <h2 style={{ fontFamily: 'var(--font-display)', color: 'var(--neon-cyan)', fontSize: '1.4rem' }}>
-              CLICK TO ENGAGE COMBAT RETICLE
-            </h2>
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginTop: '6px' }}>
-              WASD Move • Mouse Aim • LMB Fire • RMB Focus Aim • Shift Sprint • Space Jump • ESC Pause
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Top Header: Mission Objective & Timer */}
       <div style={topBarStyle}>
         <div className="cyber-panel" style={objectivePanelStyle}>
@@ -223,21 +204,6 @@ const hudContainerStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   padding: '24px',
   zIndex: 20,
-};
-
-const pointerPromptOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(0, 0, 0, 0.45)',
-  backdropFilter: 'blur(3px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  pointerEvents: 'auto',
-  zIndex: 50,
 };
 
 const topBarStyle: React.CSSProperties = {

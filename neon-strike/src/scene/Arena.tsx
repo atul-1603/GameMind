@@ -1,6 +1,5 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ArenaMissionConfig } from '../game/arenaDefinitions';
 
@@ -9,39 +8,9 @@ interface ArenaProps {
   collectedPickups?: Set<string>;
 }
 
-// Pre-load clocktower GLB
-useGLTF.preload('/models/clocktower.glb');
-
 export const Arena: React.FC<ArenaProps> = ({ mission, collectedPickups }) => {
   const pickupsRef = useRef<THREE.Group>(null);
   const extractionRef = useRef<THREE.Mesh>(null);
-
-  // Load the clocktower 3D map
-  const { scene: clocktowerScene } = useGLTF('/models/clocktower.glb');
-
-  // Prepare clocktower mesh once: enable shadows, realistic materials
-  const mapScene = useMemo(() => {
-    const cloned = clocktowerScene.clone(true);
-    cloned.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.frustumCulled = false;
-        if (child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach((m) => {
-              m.roughness = 0.8;
-              m.metalness = 0.15;
-            });
-          } else {
-            child.material.roughness = 0.8;
-            child.material.metalness = 0.15;
-          }
-        }
-      }
-    });
-    return cloned;
-  }, [clocktowerScene]);
 
   useFrame((_, delta) => {
     // Pickups rotation & bobbing
@@ -63,18 +32,22 @@ export const Arena: React.FC<ArenaProps> = ({ mission, collectedPickups }) => {
 
   return (
     <group>
-      {/* Real 3D Clocktower Map - properly centered with floor at y=0 */}
-      <primitive
-        object={mapScene}
-        position={[-18.97, -17.08, -5.06]}
-        scale={[1, 1, 1]}
-      />
-
-      {/* Subtle foundational terrain underneath the clocktower */}
+      {/* Modular arena shell replaces the external map asset. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-        <planeGeometry args={[300, 300]} />
-        <meshStandardMaterial color="#1e2433" roughness={0.9} metalness={0.1} />
+        <planeGeometry args={[70, 70]} />
+        <meshStandardMaterial color="#111827" roughness={0.9} metalness={0.1} />
       </mesh>
+      {[
+        [0, 1.5, -22, 45, 3, 1],
+        [0, 1.5, 22, 45, 3, 1],
+        [-22, 1.5, 0, 1, 3, 45],
+        [22, 1.5, 0, 1, 3, 45],
+      ].map(([x, y, z, width, height, depth], index) => (
+        <mesh key={index} castShadow receiveShadow position={[x, y, z]}>
+          <boxGeometry args={[width, height, depth]} />
+          <meshStandardMaterial color="#1e293b" emissive="#0f172a" emissiveIntensity={0.35} metalness={0.6} roughness={0.5} />
+        </mesh>
+      ))}
 
       {/* Pickups (Floating Health & Ammo Packs) */}
       <group ref={pickupsRef}>

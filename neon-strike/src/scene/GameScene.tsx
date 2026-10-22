@@ -9,7 +9,7 @@ import { Effects } from './Effects';
 import { GameHUD } from '../ui/GameHUD';
 import { PauseMenu } from '../ui/PauseMenu';
 import { MissionComplete } from '../ui/MissionComplete';
-import { resolvePlayerCollisions, castRayAgainstObstacles } from '../game/collision';
+import { resolvePlayerCollisions, castRayAgainstObstacles, rayIntersectsTarget } from '../game/collision';
 import { soundEngine, type Projectile, type SparkParticle } from '../game/combatSystem';
 import { createEnemyInstance, updateEnemy, type EnemyInstance } from '../ai/enemyController';
 import { buildGridMapFromArena } from '../ai/navigation';
@@ -128,6 +128,7 @@ export const GameScene: React.FC = () => {
     updateTimeElapsed,
     settings,
     missionStats,
+    missionResetVersion,
   } = useGameStore();
 
   const currentMission = MISSIONS.find((m) => m.id === currentMissionIndex) || MISSIONS[0];
@@ -166,7 +167,23 @@ export const GameScene: React.FC = () => {
   const lastFireTime = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const createMissionEnemies = useCallback(
+    () => currentMission.enemies.map((e) => createEnemyInstance(e.id, e.type, e.position, e.patrolRoute)),
+    [currentMission]
+  );
 
+  // Retry and restart keep this component mounted, so rebuild all local combat state explicitly.
+  useEffect(() => {
+    setEnemies(createMissionEnemies());
+    setPlayerPos([currentMission.playerSpawn.x, currentMission.playerSpawn.y, currentMission.playerSpawn.z]);
+    setPlayerVelY(0);
+    setYaw(0);
+    setPitch(0);
+    setCollectedPickups(new Set());
+    setProjectiles([]);
+    setSparks([]);
+    setHitMarkerVisible(false);
+  }, [missionResetVersion, currentMission, createMissionEnemies]);
 
   // Request pointer lock
   const requestPointerLock = useCallback(() => {
@@ -224,11 +241,12 @@ export const GameScene: React.FC = () => {
     const dirX = -Math.sin(yaw) * Math.cos(pitch);
     const dirY = Math.sin(pitch);
     const dirZ = -Math.cos(yaw) * Math.cos(pitch);
+    const muzzleDistance = isAiming ? 0.2 : 0.35;
 
     const origin = {
-      x: playerPos[0] + (isAiming ? 0.2 : 0.35) * Math.cos(yaw),
+      x: playerPos[0] + dirX * muzzleDistance,
       y: playerPos[1] + 1.2,
-      z: playerPos[2] - (isAiming ? 0.2 : 0.35) * Math.sin(yaw),
+      z: playerPos[2] + dirZ * muzzleDistance,
     };
 
     // 1. Raycast against physical obstacles
@@ -241,21 +259,15 @@ export const GameScene: React.FC = () => {
     for (const enemy of enemies) {
       if (enemy.health <= 0 || enemy.state === 'DEAD') continue;
 
-      const toEnemyX = enemy.position.x - origin.x;
-      const toEnemyY = enemy.position.y + 1.0 - origin.y;
-      const toEnemyZ = enemy.position.z - origin.z;
-
-      const projDist = toEnemyX * dirX + toEnemyY * dirY + toEnemyZ * dirZ;
-      if (projDist > 0 && projDist < closestEnemyDist) {
-        const perpX = toEnemyX - projDist * dirX;
-        const perpY = toEnemyY - projDist * dirY;
-        const perpZ = toEnemyZ - projDist * dirZ;
-        const perpDist = Math.hypot(perpX, perpY, perpZ);
-
-        if (perpDist <= 0.85) {
-          closestEnemyDist = projDist;
-          hitEnemy = enemy;
-        }
+      const targetHit = rayIntersectsTarget(
+        origin,
+        { x: dirX, y: dirY, z: dirZ },
+        { x: enemy.position.x, y: enemy.position.y + 0.9, z: enemy.position.z },
+        1.2
+      );
+      if (targetHit.hit && targetHit.distance < closestEnemyDist) {
+        closestEnemyDist = targetHit.distance;
+        hitEnemy = enemy;
       }
     }
 
@@ -281,55 +293,42 @@ export const GameScene: React.FC = () => {
 
     if (hitEnemy) {
       recordShot(true);
-      const enemyTarget = hitEnemy;
+      soundEngine.playHitMarker(settings.soundVolume);
+      setHitMarkerVisible(true);
+      setTimeout(() => setHitMarkerVisible(false), 100);
+      const willKillEnemy = hitEnemy.health <= 25;
+      if (willKillEnemy) {
+        recordKill();
+        soundEngine.playImpact(settings.soundVolume);
+      }
 
-      setTimeout(() => {
-        soundEngine.playHitMarker(settings.soundVolume);
-        setHitMarkerVisible(true);
-        setTimeout(() => setHitMarkerVisible(false), 100);
+      setEnemies((prev) =>
+        prev.map((enemy) => {
+          if (enemy.id !== hitEnemy?.id) return enemy;
+          const newHp = Math.max(0, enemy.health - 25);
+          return { ...enemy, health: newHp, state: newHp <= 0 ? 'DEAD' : enemy.state };
+        })
+      );
 
-        setEnemies((prev) =>
-          prev.map((e) => {
-            if (e.id === enemyTarget.id) {
-              const newHp = Math.max(0, e.health - 25);
-              if (newHp <= 0 && e.state !== 'DEAD') {
-                recordKill();
-                soundEngine.playImpact(settings.soundVolume);
-              }
-              return {
-                ...e,
-                health: newHp,
-                state: newHp <= 0 ? 'DEAD' : e.state,
-              };
-            }
-            return e;
-          })
-        );
-
-        const hitPoint = {
-          x: origin.x + dirX * hitDist,
-          y: origin.y + dirY * hitDist,
-          z: origin.z + dirZ * hitDist,
-        };
-
-        const enemySparks: SparkParticle[] = [];
-        for (let i = 0; i < 8; i++) {
-          enemySparks.push({
-            id: `spark_enemy_${Date.now()}_${i}`,
-            x: hitPoint.x,
-            y: hitPoint.y,
-            z: hitPoint.z,
-            vx: (Math.random() - 0.5) * 8,
-            vy: Math.random() * 6,
-            vz: (Math.random() - 0.5) * 8,
-            life: 0.3,
-            maxLife: 0.3,
-            color: '#ff2a4b',
-            size: 0.1,
-          });
-        }
-        setSparks((prev) => [...prev, ...enemySparks]);
-      }, (hitDist / boltSpeed) * 1000);
+      const hitPoint = {
+        x: origin.x + dirX * hitDist,
+        y: origin.y + dirY * hitDist,
+        z: origin.z + dirZ * hitDist,
+      };
+      const enemySparks: SparkParticle[] = Array.from({ length: 8 }, (_, index) => ({
+        id: `spark_enemy_${Date.now()}_${index}`,
+        x: hitPoint.x,
+        y: hitPoint.y,
+        z: hitPoint.z,
+        vx: (Math.random() - 0.5) * 8,
+        vy: Math.random() * 6,
+        vz: (Math.random() - 0.5) * 8,
+        life: 0.3,
+        maxLife: 0.3,
+        color: '#ff2a4b',
+        size: 0.1,
+      }));
+      setSparks((prev) => [...prev, ...enemySparks]);
     } else {
       recordShot(false);
 
@@ -413,12 +412,14 @@ export const GameScene: React.FC = () => {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (document.pointerLockElement !== containerRef.current || gameState !== 'playing') {
+      if (gameState !== 'playing') {
         return;
       }
       if (e.button === 0) {
+        requestPointerLock();
         firePlasmaBlaster();
       } else if (e.button === 2) {
+        requestPointerLock();
         setIsAiming(true);
       }
     };
@@ -478,7 +479,7 @@ export const GameScene: React.FC = () => {
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
 
-      if (gameState === 'playing' && isPointerLocked) {
+      if (gameState === 'playing') {
         updateTimeElapsed(dt);
 
         // 1. Player Locomotion
@@ -681,6 +682,7 @@ export const GameScene: React.FC = () => {
     settings.activeAlgorithm,
     settings.soundVolume,
     missionStats.extractionActive,
+    missionResetVersion,
     updatePlayerHealth,
     recordDamageReceived,
     updateTimeElapsed,
@@ -715,8 +717,6 @@ export const GameScene: React.FC = () => {
 
       {/* Cyber Combat HUD */}
       <GameHUD
-        isPointerLocked={isPointerLocked}
-        onRequestPointerLock={requestPointerLock}
         isAiming={isAiming}
         isShooting={isShooting}
         hitMarkerVisible={hitMarkerVisible}

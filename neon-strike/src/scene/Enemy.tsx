@@ -1,47 +1,23 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { EnemyInstance } from '../ai/enemyController';
 
 interface EnemyProps {
   enemy: EnemyInstance;
 }
 
-// Pre-load enemy GLB
-useGLTF.preload('/models/enemy.glb');
-
 const ARCHETYPE_CONFIG = {
-  scout: { scale: 0.009, tint: '#ff3300', lightColor: '#ff3300' },
-  guardian: { scale: 0.014, tint: '#eab308', lightColor: '#eab308' },
-  hunter: { scale: 0.011, tint: '#a855f7', lightColor: '#a855f7' },
+  scout: { tint: '#ff3300', lightColor: '#ff3300', size: 0.82 },
+  guardian: { tint: '#eab308', lightColor: '#eab308', size: 1.05 },
+  hunter: { tint: '#a855f7', lightColor: '#a855f7', size: 0.92 },
 };
 
 export const Enemy: React.FC<EnemyProps> = ({ enemy }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const { scene: enemyScene } = useGLTF('/models/enemy.glb');
-
   const isDead = enemy.health <= 0 || enemy.state === 'DEAD';
   const healthPercent = Math.max(0, Math.min(100, (enemy.health / enemy.maxHealth) * 100));
   const config = ARCHETYPE_CONFIG[enemy.archetype] || ARCHETYPE_CONFIG.scout;
-
-  // Clone enemy scene uniquely for this enemy instance
-  const clonedScene = useMemo(() => {
-    const clone = SkeletonUtils.clone(enemyScene);
-    clone.scale.set(config.scale, config.scale, config.scale);
-    clone.rotation.y = Math.PI;
-
-    clone.traverse((child: THREE.Object3D) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.frustumCulled = false;
-      }
-    });
-
-    return clone;
-  }, [enemyScene, config.scale]);
 
   useFrame(({ clock }) => {
     if (!groupRef.current || isDead) return;
@@ -69,12 +45,32 @@ export const Enemy: React.FC<EnemyProps> = ({ enemy }) => {
           ? '#eab308'
           : '#06b6d4';
 
-  const healthBarY = config.scale * 190 + 0.3;
+  const healthBarY = config.size * 2.15 + 0.25;
 
   return (
     <group ref={groupRef}>
-      {/* 3D Cloned Enemy Model */}
-      <primitive object={clonedScene} />
+      {/* Procedural opponents are visible, lightweight, and require no model downloads. */}
+      <mesh castShadow position={[0, config.size * 0.75, 0]} scale={[config.size, config.size, config.size]}>
+        <octahedronGeometry args={[0.72, 1]} />
+        <meshStandardMaterial color={config.tint} emissive={config.tint} emissiveIntensity={0.4} metalness={0.75} roughness={0.25} />
+      </mesh>
+      <mesh castShadow position={[0, config.size * 1.58, 0]} scale={[config.size, config.size, config.size]}>
+        <sphereGeometry args={[0.34, 16, 12]} />
+        <meshStandardMaterial color="#111827" emissive={stateColor} emissiveIntensity={0.8} metalness={0.65} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, config.size * 1.58, -config.size * 0.3]} scale={[config.size, config.size, config.size]}>
+        <boxGeometry args={[0.5, 0.08, 0.08]} />
+        <meshBasicMaterial color={stateColor} />
+      </mesh>
+      {/* Bright target ring makes the opponent's aim point readable at gameplay distance. */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
+        <torusGeometry args={[config.size * 0.9, 0.035, 8, 32]} />
+        <meshBasicMaterial color={stateColor} transparent opacity={0.9} />
+      </mesh>
+      <mesh position={[0, config.size * 2.05, 0]}>
+        <coneGeometry args={[0.11, 0.22, 4]} />
+        <meshBasicMaterial color={stateColor} />
+      </mesh>
 
       {/* Subtle archetype light */}
       <pointLight color={config.lightColor} intensity={1.5} distance={3.5} position={[0, 1.2, 0]} />

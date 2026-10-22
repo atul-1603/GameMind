@@ -1,8 +1,6 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 interface PlayerProps {
   position: [number, number, number];
@@ -13,10 +11,6 @@ interface PlayerProps {
   isShooting: boolean;
 }
 
-// Pre-load GLB assets
-useGLTF.preload('/models/warrior.glb');
-useGLTF.preload('/models/ak47.glb');
-
 export const Player: React.FC<PlayerProps> = ({
   position,
   yaw,
@@ -26,40 +20,6 @@ export const Player: React.FC<PlayerProps> = ({
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const weaponGroupRef = useRef<THREE.Group>(null);
-
-  const { scene: warriorScene } = useGLTF('/models/warrior.glb');
-  const { scene: ak47Scene } = useGLTF('/models/ak47.glb');
-
-  // Clone models safely using SkeletonUtils
-  const warriorClone = useMemo(() => {
-    const clone = SkeletonUtils.clone(warriorScene);
-    // Warrior height in GLB is 1.0 unit -> scale to 1.8m tall
-    clone.scale.set(1.8, 1.8, 1.8);
-    // Orient model to face forward
-    clone.rotation.y = Math.PI;
-    clone.traverse((child: THREE.Object3D) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.frustumCulled = false;
-      }
-    });
-    return clone;
-  }, [warriorScene]);
-
-  const ak47Clone = useMemo(() => {
-    const clone = SkeletonUtils.clone(ak47Scene);
-    // AK-47 is ~938 units in GLB -> scale to ~1.0m length
-    clone.scale.set(0.0012, 0.0012, 0.0012);
-    clone.traverse((child: THREE.Object3D) => {
-      if (child instanceof THREE.Mesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
-        child.frustumCulled = false;
-      }
-    });
-    return clone;
-  }, [ak47Scene]);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
@@ -90,12 +50,30 @@ export const Player: React.FC<PlayerProps> = ({
 
   return (
     <group ref={groupRef}>
-      {/* 3D Warrior Fighter Model */}
-      <primitive object={warriorClone} />
+      {/* Procedural player silhouette keeps the shooter playable without external models. */}
+      <mesh castShadow position={[0, 1.05, 0]}>
+        <capsuleGeometry args={[0.34, 0.95, 8, 16]} />
+        <meshStandardMaterial color="#22d3ee" emissive="#075985" emissiveIntensity={0.35} metalness={0.7} roughness={0.28} />
+      </mesh>
+      <mesh castShadow position={[0, 1.82, 0]}>
+        <sphereGeometry args={[0.27, 16, 12]} />
+        <meshStandardMaterial color="#dbeafe" emissive="#0e7490" emissiveIntensity={0.25} metalness={0.5} roughness={0.3} />
+      </mesh>
+      <mesh castShadow position={[0, 1.32, -0.34]} rotation={[Math.PI / 2, 0, 0]}>
+        <boxGeometry args={[0.46, 0.12, 0.12]} />
+        <meshBasicMaterial color="#f8fafc" />
+      </mesh>
 
-      {/* AK47 Weapon in hands */}
+      {/* Simple energy rifle built from primitive meshes. */}
       <group ref={weaponGroupRef} position={[0.28, 0.95, -0.4]}>
-        <primitive object={ak47Clone} />
+        <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
+          <boxGeometry args={[0.85, 0.12, 0.14]} />
+          <meshStandardMaterial color="#334155" emissive="#0f172a" metalness={0.85} roughness={0.22} />
+        </mesh>
+        <mesh position={[0, 0, -0.48]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.045, 0.045, 0.28, 12]} />
+          <meshStandardMaterial color="#67e8f9" emissive="#06b6d4" emissiveIntensity={2} />
+        </mesh>
         {isShooting && (
           <pointLight color="#ffbb33" intensity={8} distance={5} position={[0, 0, -0.6]} />
         )}

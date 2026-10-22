@@ -4,6 +4,7 @@ import {
   resolvePlayerCollisions,
   rayIntersectsAABB,
   castRayAgainstObstacles,
+  rayIntersectsTarget,
 } from '../game/collision';
 import type { ArenaObstacle } from '../game/arenaDefinitions';
 
@@ -123,5 +124,37 @@ describe('Phase 2: Combat and Collision Physics System', () => {
     expect(hit.distance).toBe(9); // hits front of first obstacle at z=9
     expect(hit.point.z).toBeCloseTo(9, 1);
     expect(hit.obstacle?.z).toBe(10);
+  });
+
+  it('registers a hit across the full rounded enemy target volume', () => {
+    const hit = rayIntersectsTarget(
+      { x: 0, y: 1.2, z: 0 },
+      { x: 0, y: 0, z: -1 },
+      { x: 0.7, y: 1.2, z: -8 },
+      1.05
+    );
+
+    expect(hit.hit).toBe(true);
+    expect(hit.distance).toBeGreaterThan(0);
+  });
+
+  it('registers a centered shot from the corrected muzzle position', () => {
+    const yaw = Math.PI / 2;
+    const direction = { x: -Math.sin(yaw), y: 0, z: -Math.cos(yaw) };
+    const origin = { x: direction.x * 0.35, y: 2.2, z: direction.z * 0.35 };
+    const hit = rayIntersectsTarget(origin, direction, { x: -8, y: 1.9, z: 0 }, 1.2);
+
+    expect(hit.hit).toBe(true);
+  });
+
+  it('does not register targets behind the shooter', () => {
+    const hit = rayIntersectsTarget(
+      { x: 0, y: 1.2, z: 0 },
+      { x: 0, y: 0, z: -1 },
+      { x: 0, y: 1.2, z: 8 },
+      1.05
+    );
+
+    expect(hit.hit).toBe(false);
   });
 });
