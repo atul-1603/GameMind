@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --bg-primary: #07090e;
+  --bg-secondary: #0d121d;
+  --bg-panel: rgba(13, 18, 29, 0.85);
+  --bg-panel-border: rgba(0, 240, 255, 0.25);
+  
+  --neon-cyan: #00f0ff;
+  --neon-cyan-glow: rgba(0, 240, 255, 0.5);
+  --neon-magenta: #b026ff;
+  --neon-magenta-glow: rgba(176, 38, 255, 0.5);
+  --neon-orange: #ff5500;
+  --neon-orange-glow: rgba(255, 85, 0, 0.5);
+  --neon-green: #00ff66;
+  --neon-green-glow: rgba(0, 255, 102, 0.5);
+  --neon-yellow: #ffe600;
+  --neon-red: #ff2a4b;
+
+  --text-main: #f0f4fc;
+  --text-dim: #8b9bb4;
+  --text-accent: #00f0ff;
+
+  --font-display: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-ui: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(10, 15, 25, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neon-cyan);
+  border-radius: 3px;
+}
+
+/* Sci-fi panel styles */
+.cyber-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--bg-panel-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(0, 240, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 6px;
+  position: relative;
+}
+
+.cyber-panel::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 10px;
+  width: 40px;
+  height: 2px;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 8px var(--neon-cyan);
+}
+
+.cyber-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: 10px;
+  width: 40px;
+  height: 2px;
+  background: var(--neon-magenta);
+  box-shadow: 0 0 8px var(--neon-magenta);
+}
+
+/* Futuristic Neon Button */
+.cyber-btn {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(176, 38, 255, 0.15));
+  border: 1px solid var(--neon-cyan);
+  padding: 12px 28px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cyber-btn:hover {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.35), rgba(176, 38, 255, 0.35));
+  box-shadow: 0 0 20px var(--neon-cyan-glow), inset 0 0 10px var(--neon-cyan);
+  border-color: #fff;
+  transform: translateY(-2px);
+}
+
+.cyber-btn:active {
+  transform: translateY(1px);
+}
+
+.cyber-btn-secondary {
+  border-color: var(--neon-magenta);
+  background: rgba(176, 38, 255, 0.1);
+}
+
+.cyber-btn-secondary:hover {
+  box-shadow: 0 0 20px var(--neon-magenta-glow);
+  border-color: #fff;
+}
+
+.cyber-btn-orange {
+  border-color: var(--neon-orange);
+  background: rgba(255, 85, 0, 0.15);
+}
+
+.cyber-btn-orange:hover {
+  box-shadow: 0 0 20px var(--neon-orange-glow);
+  border-color: #fff;
+}
+
+/* Hologram text glow */
+.text-cyan {
+  color: var(--neon-cyan);
+  text-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+.text-magenta {
+  color: var(--neon-magenta);
+  text-shadow: 0 0 10px var(--neon-magenta-glow);
+}
+.text-orange {
+  color: var(--neon-orange);
+  text-shadow: 0 0 10px var(--neon-orange-glow);
+}
+.text-green {
+  color: var(--neon-green);
+  text-shadow: 0 0 10px var(--neon-green-glow);
+}
+
+/* Subtle CRT scanline effect on HUD screens */
+.scanlines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+  background-size: 100% 3px, 6px 100%;
+  z-index: 999;
+}
